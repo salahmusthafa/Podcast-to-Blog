@@ -41,7 +41,7 @@ npm install
 
 2. Create environment file:
 ```bash
-cp .env.example .env.local
+cp env.example .env.local
 ```
 
 3. Add your API URL:
@@ -196,4 +196,4 @@ MIT License - see LICENSE file for details
 
 ---
 
-Built with ❤️ for podcast creators 
+Built with ❤️ for podcast creators
