@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { CloudArrowUpIcon, DocumentAudioIcon } from '@heroicons/react/24/outline'
+import { CloudArrowUpIcon, DocumentIcon } from '@heroicons/react/24/outline'
 import { transcribeAudio } from '@/lib/api'
 
 interface FileUploadProps {
@@ -89,7 +89,7 @@ export function FileUpload({ onProcessingStart, onProcessingComplete }: FileUplo
           </div>
         ) : (
           <div>
-            <DocumentAudioIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+            <DocumentIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
             {isDragActive ? (
               <p className="text-primary-600 font-medium">Drop your audio file here</p>
             ) : (

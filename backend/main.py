@@ -1,9 +1,8 @@
 import os
 import tempfile
-from typing import Optional
+from typing import Optional, Dict, Any
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 import openai
 from dotenv import load_dotenv
 
@@ -27,33 +26,11 @@ app.add_middleware(
 # Initialize OpenAI client
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-class BlogRequest(BaseModel):
-    transcript: str
-
-class SEORequest(BaseModel):
-    content: str
-
-class TranscriptionResponse(BaseModel):
-    transcript: str
-    blog: dict
-
-class BlogResponse(BaseModel):
-    title: str
-    content: str
-    seoTitle: str
-    metaDescription: str
-    tags: list[str]
-
-class SEOResponse(BaseModel):
-    seoTitle: str
-    metaDescription: str
-    tags: list[str]
-
 @app.get("/")
 async def root():
     return {"message": "Podcast to Blog API"}
 
-@app.post("/transcribe", response_model=TranscriptionResponse)
+@app.post("/transcribe")
 async def transcribe_audio(audio: UploadFile = File(...)):
     """
     Transcribe audio file and generate blog post
@@ -90,51 +67,59 @@ async def transcribe_audio(audio: UploadFile = File(...)):
         # Generate SEO metadata
         seo_data = await generate_seo_metadata(blog_content["content"])
         
-        return TranscriptionResponse(
-            transcript=transcript_response,
-            blog={
+        return {
+            "transcript": transcript_response,
+            "blog": {
                 "title": blog_content["title"],
                 "content": blog_content["content"],
                 "seoTitle": seo_data["seoTitle"],
                 "metaDescription": seo_data["metaDescription"],
                 "tags": seo_data["tags"]
             }
-        )
+        }
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
 
-@app.post("/generate-blog", response_model=BlogResponse)
-async def generate_blog(request: BlogRequest):
+@app.post("/generate-blog")
+async def generate_blog(request: Dict[str, Any]):
     """
     Generate blog post from transcript
     """
     try:
-        blog_content = await generate_blog_content(request.transcript)
+        transcript = request.get("transcript", "")
+        if not transcript:
+            raise HTTPException(status_code=400, detail="Transcript is required")
+            
+        blog_content = await generate_blog_content(transcript)
         seo_data = await generate_seo_metadata(blog_content["content"])
         
-        return BlogResponse(
-            title=blog_content["title"],
-            content=blog_content["content"],
-            seoTitle=seo_data["seoTitle"],
-            metaDescription=seo_data["metaDescription"],
-            tags=seo_data["tags"]
-        )
+        return {
+            "title": blog_content["title"],
+            "content": blog_content["content"],
+            "seoTitle": seo_data["seoTitle"],
+            "metaDescription": seo_data["metaDescription"],
+            "tags": seo_data["tags"]
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Blog generation failed: {str(e)}")
 
-@app.post("/generate-seo", response_model=SEOResponse)
-async def generate_seo(request: SEORequest):
+@app.post("/generate-seo")
+async def generate_seo(request: Dict[str, Any]):
     """
     Generate SEO metadata from blog content
     """
     try:
-        seo_data = await generate_seo_metadata(request.content)
-        return SEOResponse(**seo_data)
+        content = request.get("content", "")
+        if not content:
+            raise HTTPException(status_code=400, detail="Content is required")
+            
+        seo_data = await generate_seo_metadata(content)
+        return seo_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"SEO generation failed: {str(e)}")
 
-async def generate_blog_content(transcript: str) -> dict:
+async def generate_blog_content(transcript: str) -> Dict[str, str]:
     """
     Generate blog content using OpenAI GPT
     """
@@ -180,7 +165,7 @@ async def generate_blog_content(transcript: str) -> dict:
         "content": blog_content.strip()
     }
 
-async def generate_seo_metadata(content: str) -> dict:
+async def generate_seo_metadata(content: str) -> Dict[str, Any]:
     """
     Generate SEO metadata using OpenAI GPT
     """
